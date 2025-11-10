@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trang Quản Lý Sản Phẩm</title>
+    <!-- Tải Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tải icon (Heroicons) -->
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"
+    ></script>
+
+    <style>
+      /* Sử dụng font Inter */
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      /* Tùy chỉnh thanh cuộn cho đẹp hơn */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+      /* Ẩn modal ban đầu */
+      .modal {
+        display: none;
+      }
+      /* Hiển thị modal khi có class 'flex' */
+      .modal.flex {
+        display: flex;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 text-gray-800">
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-20">
+      <nav
+        class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center"
+      >
+        <h1 class="text-2xl font-bold text-blue-600">Quản Lý Sản Phẩm</h1>
+        <button
+          id="openAddModalBtn"
+          class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 flex items-center"
+        >
+          <ion-icon name="add-outline" class="mr-2"></ion-icon>
+          Thêm Sản Phẩm
+        </button>
+      </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- tv2: Thanh tìm kiếm và lọc -->
+      <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Tìm kiếm -->
+          <div>
+            <label
+              for="searchInput"
+              class="block text-sm font-medium text-gray-700 mb-1"
+              >Tìm kiếm theo tên</label
+            >
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Nhập tên điện thoại..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <!-- Lọc theo đánh giá -->
+          <div>
+            <label
+              for="filterRating"
+              class="block text-sm font-medium text-gray-700 mb-1"
+              >Lọc theo đánh giá</label
+            >
+            <select
+              id="filterRating"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Tất cả đánh giá</option>
+              <option value="5">5 sao</option>
+              <option value="4">4 sao trở lên</option>
+              <option value="3">3 sao trở lên</option>
+            </select>
+          </div>
+          <!-- Sắp xếp -->
+          <div>
+            <label
+              for="sortPrice"
+              class="block text-sm font-medium text-gray-700 mb-1"
+              >Sắp xếp theo giá</label
+            >
+            <select
+              id="sortPrice"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="default">Mặc định</option>
+              <option value="asc">Giá tăng dần</option>
+              <option value="desc">Giá giảm dần</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- tv2: Danh sách sản phẩm -->
+      <div
+        id="productList"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      >
+        <!-- Sản phẩm sẽ được chèn vào đây bằng JavaScript -->
+      </div>
+
+      <!-- Thông báo không tìm thấy sản phẩm -->
+      <div
+        id="noProductMessage"
+        class="text-center text-gray-500 text-xl mt-10"
+        style="display: none"
+      >
+        Không tìm thấy sản phẩm phù hợp.
+      </div>
+    </main>
+
+    <!-- tv3: Modal Thêm/Sửa Sản Phẩm (Ban đầu ẩn) -->
+    <div
+      id="productModal"
+      class="modal fixed inset-0 bg-black bg-opacity-50 z-30 items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-screen overflow-y-auto"
+      >
+        <!-- Header Modal -->
+        <div class="flex justify-between items-center p-4 border-b">
+          <h2 id="modalTitle" class="text-xl font-bold text-gray-800">
+            Thêm Sản Phẩm Mới
+          </h2>
+          <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+            <ion-icon name="close-outline" class="text-2xl"></ion-icon>
+          </button>
+        </div>
+
+        <!-- Form (tv3) -->
+        <form id="productForm" class="p-6 space-y-4">
+          <!-- ID sản phẩm (ẩn, dùng để sửa) -->
+          <input type="hidden" id="productId" />
+
+          <!-- Tên Sản Phẩm -->
+          <div>
+            <label
+              for="productName"
+              class="block text-sm font-medium text-gray-700"
+              >Tên sản phẩm (*)</label
+            >
+            <input
+              type="text"
+              id="productName"
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <span
+              id="nameError"
+              class="text-red-500 text-sm mt-1"
+              style="display: none"
+              >Vui lòng nhập tên sản phẩm.</span
+            >
+          </div>
+
+          <!-- Giá Sản Phẩm -->
+          <div>
+            <label
+              for="productPrice"
+              class="block text-sm font-medium text-gray-700"
+              >Giá sản phẩm (*)</label
+            >
+            <input
+              type="number"
+              id="productPrice"
+              min="0"
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <span
+              id="priceError"
+              class="text-red-500 text-sm mt-1"
+              style="display: none"
+              >Vui lòng nhập giá hợp lệ (lớn hơn 0).</span
+            >
+          </div>
+
+          <!-- Ảnh Sản Phẩm (URL) -->
+          <div>
+            <label
+              for="productImage"
+              class="block text-sm font-medium text-gray-700"
+              >URL Hình ảnh</label
+            >
+            <input
+              type="url"
+              id="productImage"
+              placeholder="https://example.com/image.png"
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <!-- Mô Tả -->
+          <div>
+            <label
+              for="productDescription"
+              class="block text-sm font-medium text-gray-700"
+              >Mô tả</label
+            >
+            <textarea
+              id="productDescription"
+              rows="3"
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ></textarea>
+          </div>
+
+          <!-- Đánh Giá -->
+          <div>
+            <label
+              for="productRating"
+              class="block text-sm font-medium text-gray-700"
+              >Đánh giá (từ 1 đến 5)</label
+            >
+            <input
+              type="number"
+              id="productRating"
+              min="1"
+              max="5"
+              step="0.1"
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <!-- Nút Lưu -->
+          <div class="flex justify-end pt-4">
+            <button
+              type="button"
+              id="cancelBtn"
+              class="mr-3 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition duration-300"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              id="saveBtn"
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-300"
+            >
+              Lưu Sản Phẩm
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Script (tv5: Xử lý dữ liệu) -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // --- tv5: Dữ liệu giả lập (Mock Data) ---
+        // Thay vì Local Storage hay API thật, ta dùng mảng này
+        let allProducts = [
+          {
+            id: 1,
+            name: 'iPhone 15 Pro Max',
+            price: 32000000,
+            image:
+              'https://placehold.co/600x400/3498db/ffffff?text=iPhone+15+Pro',
+            description: 'Điện thoại cao cấp nhất của Apple 2023.',
+            rating: 4.8,
+          },
+          {
+            id: 2,
+            name: 'Samsung Galaxy S24 Ultra',
+            price: 30000000,
+            image: 'https://placehold.co/600x400/2ecc71/ffffff?text=Galaxy+S24',
+            description: 'Tích hợp AI, camera zoom 100x.',
+            rating: 4.7,
+          },
+          {
+            id: 3,
+            name: 'Oppo Find X7 Ultra',
+            price: 25000000,
+            image:
+              'https://placehold.co/600x400/e74c3c/ffffff?text=Oppo+Find+X7',
+            description: 'Camera hợp tác với Hasselblad.',
+            rating: 4.5,
+          },
+          {
+            id: 4,
+            name: 'Xiaomi 14 Ultra',
+            price: 28000000,
+            image: 'https://placehold.co/600x400/f39c12/ffffff?text=Xiaomi+14',
+            description: 'Thiết kế hầm hố, cảm biến camera 1 inch.',
+            rating: 4.6,
+          },
+          {
+            id: 5,
+            name: 'Google Pixel 8 Pro',
+            price: 24000000,
+            image: 'https://placehold.co/600x400/9b59b6/ffffff?text=Pixel+8',
+            description: 'Trải nghiệm Android thuần khiết, camera AI.',
+            rating: 4.4,
+          },
+          {
+            id: 6,
+            name: 'iPhone 15',
+            price: 22000000,
+            image: 'https://placehold.co/600x400/34495e/ffffff?text=iPhone+15',
+            description: 'Phiên bản tiêu chuẩn, chip A16 Bionic.',
+            rating: 4.2,
+          },
+          // --- Bổ sung thêm sản phẩm ---
+          {
+            id: 7,
+            name: 'Samsung Galaxy Z Fold 5',
+            price: 40000000,
+            image: 'https://placehold.co/600x400/1abc9c/ffffff?text=Z+Fold+5',
+            description: 'Điện thoại gập cao cấp, đa nhiệm tốt.',
+            rating: 4.7,
+          },
+          {
+            id: 8,
+            name: 'ASUS ROG Phone 8',
+            price: 26000000,
+            image:
+              'https://placehold.co/600x400/c0392b/ffffff?text=ROG+Phone+8',
+            description: 'Điện thoại chuyên game, cấu hình khủng.',
+            rating: 4.9,
+          },
+          {
+            id: 9,
+            name: 'Vivo X100 Pro',
+            price: 23000000,
+            image: 'https://placehold.co/600x400/2980b9/ffffff?text=Vivo+X100',
+            description: 'Camera Zeiss, sạc siêu nhanh.',
+            rating: 4.5,
+          },
+          {
+            id: 10,
+            name: 'Realme GT 5 Pro',
+            price: 18000000,
+            image: 'https://placehold.co/600x400/d35400/ffffff?text=Realme+GT5',
+            description: 'Cấu hình flagship, giá tầm trung.',
+            rating: 4.3,
+          },
+          {
+            id: 11,
+            name: 'Samsung Galaxy A55',
+            price: 9500000,
+            image: 'https://placehold.co/600x400/8e44ad/ffffff?text=Galaxy+A55',
+            description: 'Điện thoại tầm trung bán chạy.',
+            rating: 4.0,
+          },
+          {
+            id: 12,
+            name: 'iPhone 13',
+            price: 17000000,
+            image: 'https://placehold.co/600x400/7f8c8d/ffffff?text=iPhone+13',
+            description: 'Giá tốt, hiệu năng vẫn mạnh mẽ.',
+            rating: 4.1,
+          },
+        ]
+
+        let currentProducts = [...allProducts] // Mảng để hiển thị (sau khi lọc/sắp xếp)
+
+        // --- Lấy các phần tử DOM ---
+        const productListEl = document.getElementById('productList')
+        const noProductMessageEl = document.getElementById('noProductMessage')
+
+        // Phần tử cho tv2
+        const searchInput = document.getElementById('searchInput')
+        const filterRating = document.getElementById('filterRating')
+        const sortPrice = document.getElementById('sortPrice')
+
+        // Phần tử cho tv3 & tv4
+        const productModal = document.getElementById('productModal')
+        const modalTitle = document.getElementById('modalTitle')
+        const openAddModalBtn = document.getElementById('openAddModalBtn')
+        const closeModalBtn = document.getElementById('closeModalBtn')
+        const cancelBtn = document.getElementById('cancelBtn')
+        const productForm = document.getElementById('productForm')
+        const saveBtn = document.getElementById('saveBtn')
+
+        // DOM cho form fields
+        const productIdEl = document.getElementById('productId')
+        const productNameEl = document.getElementById('productName')
+        const productPriceEl = document.getElementById('productPrice')
+        const productImageEl = document.getElementById('productImage')
+        const productDescriptionEl =
+          document.getElementById('productDescription')
+        const productRatingEl = document.getElementById('productRating')
+
+        // DOM cho lỗi (tv3)
+        const nameError = document.getElementById('nameError')
+        const priceError = document.getElementById('priceError')
+
+        // --- tv1 & tv2: Hàm hiển thị danh sách sản phẩm ---
+        function renderProducts(productsToRender) {
+          productListEl.innerHTML = '' // Xóa danh sách cũ
+
+          if (productsToRender.length === 0) {
+            noProductMessageEl.style.display = 'block'
+            return
+          }
+
+          noProductMessageEl.style.display = 'none'
+
+          productsToRender.forEach((product) => {
+            const productCard = document.createElement('div')
+            productCard.className =
+              'bg-white rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105'
+
+            // Định dạng giá tiền
+            const formattedPrice = new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(product.price)
+
+            // Hình ảnh
+            const placeholderImg =
+              'https://placehold.co/600x400/ecf0f1/95a5a6?text=No+Image'
+
+            productCard.innerHTML = `
+                        <img src="${product.image || placeholderImg}" alt="${
+              product.name
+            }" class="w-full h-48 object-cover" onerror="this.src='${placeholderImg}'">
+                        <div class="p-4">
+                            <h3 class="text-lg font-bold text-gray-900 truncate">${
+                              product.name
+                            }</h3>
+                            <p class="text-gray-600 mt-1 h-10 overflow-hidden text-ellipsis">${
+                              product.description || 'Chưa có mô tả'
+                            }</p>
+                            
+                            <div class="flex justify-between items-center mt-3">
+                                <span class="text-xl font-bold text-blue-600">${formattedPrice}</span>
+                                <span class="flex items-center text-yellow-500 font-semibold">
+                                    <ion-icon name="star" class="mr-1"></ion-icon>
+                                    ${product.rating || 'N/A'}
+                                </span>
+                            </div>
+
+                            <!-- tv4: Nút Sửa & Xóa -->
+                            <div class="mt-4 flex space-x-3">
+                                <button data-id="${
+                                  product.id
+                                }" class="edit-btn w-1/2 bg-yellow-500 text-white px-3 py-2 rounded-lg font-semibold hover:bg-yellow-600 transition duration-300 flex items-center justify-center">
+                                    <ion-icon name="create-outline" class="mr-2"></ion-icon> Sửa
+                                </button>
+                                <button data-id="${
+                                  product.id
+                                }" class="delete-btn w-1/2 bg-red-600 text-white px-3 py-2 rounded-lg font-semibold hover:bg-red-700 transition duration-300 flex items-center justify-center">
+                                    <ion-icon name="trash-outline" class="mr-2"></ion-icon> Xóa
+                                </button>
+                            </div>
+                        </div>
+                    `
+            productListEl.appendChild(productCard)
+          })
+        }
+
+        // --- tv2: Hàm lọc và sắp xếp (kết hợp) ---
+        function filterAndSortProducts() {
+          let filtered = [...allProducts]
+
+          // 1. Lọc theo tìm kiếm
+          const searchTerm = searchInput.value.toLowerCase()
+          if (searchTerm) {
+            filtered = filtered.filter((p) =>
+              p.name.toLowerCase().includes(searchTerm),
+            )
+          }
+
+          // 2. Lọc theo đánh giá
+          const minRating = parseFloat(filterRating.value)
+          if (!isNaN(minRating) && minRating !== 'all') {
+            filtered = filtered.filter((p) => p.rating && p.rating >= minRating)
+          }
+
+          // 3. Sắp xếp
+          const sortOrder = sortPrice.value
+          if (sortOrder === 'asc') {
+            filtered.sort((a, b) => a.price - b.price) // Giá tăng dần
+          } else if (sortOrder === 'desc') {
+            filtered.sort((a, b) => b.price - a.price) // Giá giảm dần
+          }
+
+          currentProducts = filtered
+          renderProducts(currentProducts)
+        }
+
+        // --- Xử lý sự kiện cho tv2 ---
+        searchInput.addEventListener('input', filterAndSortProducts)
+        filterRating.addEventListener('change', filterAndSortProducts)
+        sortPrice.addEventListener('change', filterAndSortProducts)
+
+        // --- Các hàm cho Modal (tv3) ---
+        function openModal(mode, product = null) {
+          resetFormErrors()
+          if (mode === 'add') {
+            modalTitle.textContent = 'Thêm Sản Phẩm Mới'
+            productForm.reset()
+            productIdEl.value = ''
+            saveBtn.textContent = 'Lưu Sản Phẩm'
+          } else if (mode === 'edit') {
+            modalTitle.textContent = 'Chỉnh Sửa Sản Phẩm'
+            saveBtn.textContent = 'Cập Nhật'
+            // Điền dữ liệu vào form (tv4)
+            productIdEl.value = product.id
+            productNameEl.value = product.name
+            productPriceEl.value = product.price
+            productImageEl.value = product.image || ''
+            productDescriptionEl.value = product.description || ''
+            productRatingEl.value = product.rating || ''
+          }
+          productModal.classList.add('flex')
+        }
+
+        function closeModal() {
+          productModal.classList.remove('flex')
+          productForm.reset()
+          resetFormErrors()
+        }
+
+        // --- tv3: Xử lý Form Validation ---
+        function validateForm() {
+          let isValid = true
+          resetFormErrors()
+
+          // 1. Kiểm tra tên
+          if (!productNameEl.value.trim()) {
+            nameError.textContent = 'Vui lòng nhập tên sản phẩm.'
+            nameError.style.display = 'block'
+            productNameEl.classList.add('border-red-500')
+            isValid = false
+          }
+
+          // 2. Kiểm tra giá
+          const price = parseFloat(productPriceEl.value)
+          if (isNaN(price) || price <= 0) {
+            priceError.textContent = 'Vui lòng nhập giá hợp lệ (lớn hơn 0).'
+            priceError.style.display = 'block'
+            productPriceEl.classList.add('border-red-500')
+            isValid = false
+          }
+
+          // (Thêm các validation khác cho ảnh, mô tả, đánh giá nếu cần)
+
+          return isValid
+        }
+
+        function resetFormErrors() {
+          nameError.style.display = 'none'
+          priceError.style.display = 'none'
+          productNameEl.classList.remove('border-red-500')
+          productPriceEl.classList.remove('border-red-500')
+        }
+
+        // --- Xử lý sự kiện cho Modal (tv3) ---
+        openAddModalBtn.addEventListener('click', () => openModal('add'))
+        closeModalBtn.addEventListener('click', closeModal)
+        cancelBtn.addEventListener('click', closeModal)
+
+        // Đóng modal khi click bên ngoài
+        productModal.addEventListener('click', (e) => {
+          if (e.target === productModal) {
+            closeModal()
+          }
+        })
+
+        // --- Xử lý sự kiện Submit Form (tv3 & tv4) ---
+        productForm.addEventListener('submit', (e) => {
+          e.preventDefault() // Ngăn form gửi đi
+
+          // tv3: Kiểm tra dữ liệu
+          if (!validateForm()) {
+            return // Dừng lại nếu form không hợp lệ
+          }
+
+          // Lấy dữ liệu từ form
+          const formData = {
+            id: productIdEl.value ? parseInt(productIdEl.value) : null,
+            name: productNameEl.value,
+            price: parseFloat(productPriceEl.value),
+            image: productImageEl.value,
+            description: productDescriptionEl.value,
+            rating: productRatingEl.value
+              ? parseFloat(productRatingEl.value)
+              : null,
+          }
+
+          if (formData.id) {
+            // --- Logic Sửa (tv4) ---
+            // Đây là nơi bạn sẽ gọi API để cập nhật
+            console.log('Đang sửa sản phẩm:', formData)
+            const index = allProducts.findIndex((p) => p.id === formData.id)
+            if (index !== -1) {
+              allProducts[index] = {...allProducts[index], ...formData}
+            }
+          } else {
+            // --- Logic Thêm (tv3) ---
+            // Đây là nơi bạn sẽ gọi API để thêm mới
+            formData.id = Date.now() // Tạo ID tạm thời
+            console.log('Đang thêm sản phẩm:', formData)
+            allProducts.push(formData)
+          }
+
+          // tv5: Cập nhật lại danh sách (giả lập)
+          filterAndSortProducts() // Cập nhật và hiển thị lại
+          closeModal()
+        })
+
+        // --- Xử lý sự kiện cho Nút Sửa/Xóa (tv4) ---
+        productListEl.addEventListener('click', (e) => {
+          const target = e.target.closest('button')
+          if (!target) return
+
+          const id = parseInt(target.dataset.id)
+
+          if (target.classList.contains('edit-btn')) {
+            // --- Logic Sửa (tv4) ---
+            const productToEdit = allProducts.find((p) => p.id === id)
+            if (productToEdit) {
+              openModal('edit', productToEdit)
+            }
+          }
+
+          if (target.classList.contains('delete-btn')) {
+            // --- Logic Xóa (tv4) ---
+            // Dùng custom confirm thay vì alert/confirm
+            if (confirm(`Bạn có chắc chắn muốn xóa sản phẩm này không?`)) {
+              // Đây là nơi bạn sẽ gọi API để xóa
+              console.log('Đang xóa sản phẩm ID:', id)
+              allProducts = allProducts.filter((p) => p.id !== id)
+              filterAndSortProducts() // Cập nhật và hiển thị lại
+            }
+          }
+        })
+
+        // --- Khởi chạy ban đầu ---
+        renderProducts(currentProducts)
+      })
+    </script>
+  </body>
+</html>
